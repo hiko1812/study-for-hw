@@ -738,13 +738,19 @@ function openGame(encodedName) {
   const game = GAMES.find(g => g.name === name);
   if (!game) return;
 
-  modalTitle.textContent = game.name;
-  gameFrameContainer.innerHTML = `
-    <div class="loading-msg">Loading ${game.name}...</div>
-    <iframe src="${game.url}" allowfullscreen allow="autoplay; fullscreen; gamepad; microphone" loading="lazy"></iframe>
-  `;
-  modalOverlay.classList.add('active');
-  document.body.style.overflow = 'hidden';
+  var win = window.open('about:blank', '_blank');
+  if (win) {
+    win.document.write(`<!DOCTYPE html><html><head><title>${game.name}</title><style>*{margin:0;padding:0;overflow:hidden;height:100%}iframe{width:100%;height:100%;border:none}</style></head><body><iframe src="${game.url}" allowfullscreen allow="autoplay; fullscreen; gamepad; microphone"></iframe></body></html>`);
+    win.document.close();
+  } else {
+    modalTitle.textContent = game.name;
+    gameFrameContainer.innerHTML = `
+      <div class="loading-msg">Loading ${game.name}...</div>
+      <iframe src="${game.url}" allowfullscreen allow="autoplay; fullscreen; gamepad; microphone" loading="lazy"></iframe>
+    `;
+    modalOverlay.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
 }
 
 function closeGame() {
