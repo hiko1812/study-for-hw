@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Study For HW - Homework Helper</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #0f0f1a;
+      color: #e0e0e0;
+      min-height: 100vh;
+    }
+
+    header {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      padding: 20px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 2px solid #e94560;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .logo {
+      font-size: 28px;
+      font-weight: 800;
+      background: linear-gradient(90deg, #e94560, #0f3460, #53d8fb);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: 1px;
+    }
+
+    .search-bar {
+      position: relative;
+      width: 350px;
+    }
+
+    .search-bar input {
+      width: 100%;
+      padding: 10px 40px 10px 16px;
+      border-radius: 25px;
+      border: 2px solid #2a2a4a;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.3s;
+    }
+
+    .search-bar input:focus { border-color: #e94560; }
+
+    .search-bar svg {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 18px;
+      height: 18px;
+      fill: #888;
+    }
+
+    nav {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    nav button {
+      padding: 8px 18px;
+      border-radius: 20px;
+      border: 1px solid #2a2a4a;
+      background: #1a1a2e;
+      color: #ccc;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s;
+    }
+
+    nav button:hover, nav button.active {
+      background: #e94560;
+      color: #fff;
+      border-color: #e94560;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 30px 20px;
+    }
+
+    .section-title {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      padding-left: 12px;
+      border-left: 4px solid #e94560;
+    }
+
+    .games-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 20px;
+      margin-bottom: 40px;
+    }
+
+    .game-card {
+      background: #1a1a2e;
+      border-radius: 12px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      border: 1px solid #2a2a4a;
+    }
+
+    .game-card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 10px 30px rgba(233, 69, 96, 0.2);
+      border-color: #e94560;
+    }
+
+    .game-card .thumb {
+      width: 100%;
+      height: 160px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .game-card .thumb .play-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .game-card:hover .play-overlay { opacity: 1; }
+
+    .play-overlay svg {
+      width: 50px;
+      height: 50px;
+      fill: #fff;
+      filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5));
+    }
+
+    .game-card .info {
+      padding: 12px 14px;
+    }
+
+    .game-card .info h3 {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .game-card .info .tags {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .game-card .info .tag {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      background: #2a2a4a;
+      color: #aaa;
+    }
+
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-overlay.active { display: flex; }
+
+    .modal {
+      background: #1a1a2e;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 1100px;
+      max-height: 95vh;
+      overflow: hidden;
+      border: 2px solid #e94560;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px;
+      border-bottom: 1px solid #2a2a4a;
+    }
+
+    .modal-header h2 { font-size: 18px; }
+
+    .modal-controls {
+      display: flex;
+      gap: 10px;
+    }
+
+    .modal-controls button {
+      padding: 6px 14px;
+      border-radius: 8px;
+      border: 1px solid #2a2a4a;
+      background: #0f0f1a;
+      color: #ccc;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s;
+    }
+
+    .modal-controls button:hover {
+      background: #e94560;
+      color: #fff;
+      border-color: #e94560;
+    }
+
+    .game-frame-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #000;
+      min-height: 500px;
+      position: relative;
+    }
+
+    .game-frame-container iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      position: absolute;
+      inset: 0;
+    }
+
+    .game-frame-container .loading-msg {
+      color: #888;
+      font-size: 16px;
+      z-index: 1;
+    }
+
+    .fullscreen .modal {
+      max-width: 100%;
+      max-height: 100%;
+      border-radius: 0;
+      height: 100%;
+    }
+
+    .popular-badge {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: #e94560;
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .no-results {
+      text-align: center;
+      padding: 60px 20px;
+      color: #666;
+      font-size: 18px;
+    }
+
+    footer {
+      text-align: center;
+      padding: 30px;
+      color: #444;
+      font-size: 13px;
+      border-top: 1px solid #1a1a2e;
+    }
+
+    @media (max-width: 768px) {
+      header { flex-direction: column; gap: 12px; padding: 14px 16px; }
+      .search-bar { width: 100%; }
+      nav { justify-content: center; }
+      .games-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+      .game-card .thumb { height: 120px; font-size: 36px; }
+      .game-frame-container { min-height: 300px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">STUDY FOR HW</div>
+  <div class="search-bar">
+    <input type="text" id="searchInput" placeholder="Search games...">
+    <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+  </div>
+  <nav id="categoryNav">
+    <button class="active" data-category="all">All Games</button>
+    <button data-category="racing">Racing</button>
+    <button data-category="runner">Runner</button>
+    <button data-category="action">Action</button>
+    <button data-category="puzzle">Puzzle</button>
+    <button data-category="sports">Sports</button>
+    <button data-category="io">IO Games</button>
+    <button data-category="adventure">Adventure</button>
+    <button data-category="strategy">Strategy</button>
+  </nav>
+</header>
+
+<div class="container">
+  <h2 class="section-title" id="sectionTitle">All Games</h2>
+  <div class="games-grid" id="gamesGrid"></div>
+  <div class="no-results" id="noResults" style="display:none;">No games found. Try a different search.</div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modalTitle">Game</h2>
+      <div class="modal-controls">
+        <button id="btnFullscreen" title="Fullscreen">Fullscreen</button>
+        <button id="btnClose" title="Close">Close</button>
+      </div>
+    </div>
+    <div class="game-frame-container" id="gameFrameContainer">
+      <div class="loading-msg">Loading game...</div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  Study For HW &mdash; Your go-to homework resource. All materials are hosted by third-party providers.
+</footer>
+
+<script>
+const GAMES = [
+  {
+    name: "Slope",
+    category: ["runner", "action"],
+    color: "#2ecc71",
+    icon: "&#9650;",
+    popular: true,
+    url: "https://slope-game.github.io/",
+    description: "Roll a ball down a steep slope while avoiding obstacles"
+  },
+  {
+    name: "Poly Track",
+    category: ["racing"],
+    color: "#3498db",
+    icon: "&#128663;",
+    popular: true,
+    url: "https://polytrack.io/",
+    description: "Low-poly racing game with creative tracks"
+  },
+  {
+    name: "OvO",
+    category: ["runner", "action"],
+    color: "#e74c3c",
+    icon: "&#9899;",
+    popular: true,
+    url: "https://ovo-game.github.io/",
+    description: "Fast-paced platformer with wall jumps and slides"
+  },
+  {
+    name: "Snow Rider 3D",
+    category: ["racing", "sports"],
+    color: "#87CEEB",
+    icon: "&#9924;",
+    popular: true,
+    url: "https://snowrider3d.github.io/",
+    description: "Sled down a snowy mountain while dodging obstacles"
+  },
+  {
+    name: "Retro Bowl",
+    category: ["sports"],
+    color: "#e67e22",
+    icon: "&#127944;",
+    popular: true,
+    url: "https://retro-bowl.github.io/",
+    description: "Retro-style American football management game"
+  },
+  {
+    name: "1v1.LOL",
+    category: ["action", "io"],
+    color: "#9b59b6",
+    icon: "&#128299;",
+    popular: true,
+    url: "https://1v1.lol/",
+    description: "Build and shoot in this competitive multiplayer game"
+  },
+  {
+    name: "Tunnel Rush",
+    category: ["runner", "action"],
+    color: "#e94560",
+    icon: "&#128168;",
+    popular: true,
+    url: "https://tunnelrush.github.io/",
+    description: "Dodge obstacles in a fast-paced 3D tunnel"
+  },
+  {
+    name: "Run 3",
+    category: ["runner"],
+    color: "#1abc9c",
+    icon: "&#127939;",
+    popular: true,
+    url: "https://run3.github.io/",
+    description: "Run and jump through space tunnels"
+  },
+  {
+    name: "Moto X3M",
+    category: ["racing", "action"],
+    color: "#f39c12",
+    icon: "&#127949;",
+    popular: true,
+    url: "https://motox3m.github.io/",
+    description: "Extreme motorcycle stunt racing game"
+  },
+  {
+    name: "Basketball Stars",
+    category: ["sports"],
+    color: "#e67e22",
+    icon: "&#127936;",
+    popular: false,
+    url: "https://basketball-stars.github.io/",
+    description: "1v1 basketball game with trick shots"
+  },
+  {
+    name: "Drift Hunters",
+    category: ["racing"],
+    color: "#2c3e50",
+    icon: "&#128664;",
+    popular: true,
+    url: "https://drift-hunters.github.io/",
+    description: "3D drifting game with customizable cars"
+  },
+  {
+    name: "Smash Karts",
+    category: ["racing", "action"],
+    color: "#8e44ad",
+    icon: "&#128165;",
+    popular: true,
+    url: "https://smashkarts.io/",
+    description: "3D multiplayer kart racing with weapons"
+  },
+  {
+    name: "Paper.io 2",
+    category: ["io", "strategy"],
+    color: "#3498db",
+    icon: "&#128196;",
+    popular: false,
+    url: "https://paper-io.github.io/2/",
+    description: "Claim territory by drawing shapes"
+  },
+  {
+    name: "Shell Shockers",
+    category: ["action", "io"],
+    color: "#f1c40f",
+    icon: "&#129370;",
+    popular: true,
+    url: "https://shellshockers.io/",
+    description: "Multiplayer egg-themed FPS shooter"
+  },
+  {
+    name: "Crossy Road",
+    category: ["runner", "action"],
+    color: "#27ae60",
+    icon: "&#128020;",
+    popular: false,
+    url: "https://crossyroad.github.io/",
+    description: "Cross busy roads and rivers without getting hit"
+  },
+  {
+    name: "Geometry Dash",
+    category: ["runner", "action"],
+    color: "#2ecc71",
+    icon: "&#9632;",
+    popular: true,
+    url: "https://geometrydash.github.io/",
+    description: "Rhythm-based platformer with challenging levels"
+  },
+  {
+    name: "Happy Wheels",
+    category: ["action", "adventure"],
+    color: "#c0392b",
+    icon: "&#128690;",
+    popular: true,
+    url: "https://happywheels.github.io/",
+    description: "Ragdoll physics obstacle course game"
+  },
+  {
+    name: "Subway Surfers",
+    category: ["runner"],
+    color: "#f39c12",
+    icon: "&#127843;",
+    popular: true,
+    url: "https://subwaysurfers.github.io/",
+    description: "Endless runner through subway tracks"
+  },
+  {
+    name: "Vex 7",
+    category: ["runner", "action"],
+    color: "#e74c3c",
+    icon: "&#129336;",
+    popular: false,
+    url: "https://vex7.github.io/",
+    description: "Challenging stick figure platformer"
+  },
+  {
+    name: "2048",
+    category: ["puzzle"],
+    color: "#f0b27a",
+    icon: "&#128290;",
+    popular: false,
+    url: "https://play2048.co/",
+    description: "Slide numbered tiles to reach 2048"
+  },
+  {
+    name: "Agar.io",
+    category: ["io"],
+    color: "#52be80",
+    icon: "&#128308;",
+    popular: false,
+    url: "https://agar.io/",
+    description: "Eat smaller cells and grow bigger"
+  },
+  {
+    name: "Slither.io",
+    category: ["io"],
+    color: "#58d68d",
+    icon: "&#128013;",
+    popular: false,
+    url: "https://slither.io/",
+    description: "Grow your snake by eating glowing orbs"
+  },
+  {
+    name: "Temple Run 2",
+    category: ["runner", "adventure"],
+    color: "#d4ac0d",
+    icon: "&#127963;",
+    popular: false,
+    url: "https://templerun2.github.io/",
+    description: "Run through ancient temples collecting coins"
+  },
+  {
+    name: "Getaway Shootout",
+    category: ["action"],
+    color: "#eb984e",
+    icon: "&#128299;",
+    popular: false,
+    url: "https://getawayshootout.github.io/",
+    description: "Race against opponents with wacky physics"
+  },
+  {
+    name: "Stickman Hook",
+    category: ["action", "runner"],
+    color: "#7dcea0",
+    icon: "&#129528;",
+    popular: false,
+    url: "https://stickman-hook.github.io/",
+    description: "Swing from hook to hook like Spider-Man"
+  },
+  {
+    name: "Tiny Fishing",
+    category: ["puzzle", "adventure"],
+    color: "#5dade2",
+    icon: "&#127907;",
+    popular: false,
+    url: "https://tinyfishing.github.io/",
+    description: "Cast your line and catch fish to earn money"
+  },
+  {
+    name: "Cookie Clicker",
+    category: ["puzzle", "strategy"],
+    color: "#d4a574",
+    icon: "&#127850;",
+    popular: false,
+    url: "https://cookieclicker.github.io/",
+    description: "Click cookies and build a cookie empire"
+  },
+  {
+    name: "Drift Boss",
+    category: ["racing"],
+    color: "#a569bd",
+    icon: "&#128663;",
+    popular: false,
+    url: "https://driftboss.github.io/",
+    description: "Drift around corners on an endless road"
+  },
+  {
+    name: "Cluster Rush",
+    category: ["runner", "action"],
+    color: "#e74c3c",
+    icon: "&#128666;",
+    popular: false,
+    url: "https://clusterrush.github.io/",
+    description: "Jump between moving trucks in first person"
+  },
+  {
+    name: "Wordle",
+    category: ["puzzle"],
+    color: "#27ae60",
+    icon: "&#128221;",
+    popular: false,
+    url: "https://www.nytimes.com/games/wordle/index.html",
+    description: "Guess the five-letter word in six tries"
+  },
+  {
+    name: "Eggy Car",
+    category: ["racing", "puzzle"],
+    color: "#f9e79f",
+    icon: "&#129370;",
+    popular: false,
+    url: "https://eggycar.github.io/",
+    description: "Drive a car with an egg on top without dropping it"
+  },
+  {
+    name: "Rooftop Snipers",
+    category: ["action"],
+    color: "#cb4335",
+    icon: "&#128299;",
+    popular: false,
+    url: "https://rooftopsnipers.github.io/",
+    description: "2-player rooftop shooting game"
+  },
+  {
+    name: "Idle Breakout",
+    category: ["puzzle", "strategy"],
+    color: "#5499c7",
+    icon: "&#128310;",
+    popular: false,
+    url: "https://idlebreakout.github.io/",
+    description: "Idle version of the classic Breakout game"
+  },
+  {
+    name: "Drive Mad",
+    category: ["racing"],
+    color: "#dc7633",
+    icon: "&#128663;",
+    popular: false,
+    url: "https://drivemad.github.io/",
+    description: "Drive through crazy obstacle courses"
+  },
+  {
+    name: "Monkey Mart",
+    category: ["strategy", "puzzle"],
+    color: "#f5b041",
+    icon: "&#128053;",
+    popular: false,
+    url: "https://monkeymart.github.io/",
+    description: "Run a supermarket as a monkey"
+  },
+  {
+    name: "Bloxd.io",
+    category: ["io", "adventure"],
+    color: "#58d68d",
+    icon: "&#129513;",
+    popular: false,
+    url: "https://bloxd.io/",
+    description: "Block-based multiplayer game with multiple modes"
+  }
+];
+
+const gamesGrid = document.getElementById('gamesGrid');
+const searchInput = document.getElementById('searchInput');
+const categoryNav = document.getElementById('categoryNav');
+const sectionTitle = document.getElementById('sectionTitle');
+const noResults = document.getElementById('noResults');
+const modalOverlay = document.getElementById('modalOverlay');
+const modalTitle = document.getElementById('modalTitle');
+const gameFrameContainer = document.getElementById('gameFrameContainer');
+const btnFullscreen = document.getElementById('btnFullscreen');
+const btnClose = document.getElementById('btnClose');
+
+let currentCategory = 'all';
+let currentSearch = '';
+
+function renderGames() {
+  const filtered = GAMES.filter(game => {
+    const matchesCategory = currentCategory === 'all' || game.category.includes(currentCategory);
+    const matchesSearch = game.name.toLowerCase().includes(currentSearch.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
+
+  if (currentCategory !== 'all') {
+    const sorted = [...filtered].sort((a, b) => b.popular - a.popular);
+    buildGrid(sorted);
+  } else {
+    const popular = filtered.filter(g => g.popular);
+    const others = filtered.filter(g => !g.popular);
+    buildGrid([...popular, ...others]);
+  }
+
+  noResults.style.display = filtered.length === 0 ? 'block' : 'none';
+}
+
+function buildGrid(games) {
+  gamesGrid.innerHTML = games.map(game => `
+    <div class="game-card" onclick="openGame('${encodeURIComponent(game.name)}')">
+      <div class="thumb" style="background: linear-gradient(135deg, ${game.color}33, ${game.color}11);">
+        <span style="filter: drop-shadow(0 2px 8px ${game.color})">${game.icon}</span>
+        ${game.popular ? '<span class="popular-badge">Popular</span>' : ''}
+        <div class="play-overlay">
+          <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+        </div>
+      </div>
+      <div class="info">
+        <h3>${game.name}</h3>
+        <p style="font-size:12px;color:#888;margin-bottom:6px;">${game.description}</p>
+        <div class="tags">
+          ${game.category.map(c => `<span class="tag">${c}</span>`).join('')}
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function openGame(encodedName) {
+  const name = decodeURIComponent(encodedName);
+  const game = GAMES.find(g => g.name === name);
+  if (!game) return;
+
+  modalTitle.textContent = game.name;
+  gameFrameContainer.innerHTML = `
+    <div class="loading-msg">Loading ${game.name}...</div>
+    <iframe src="${game.url}" allowfullscreen allow="autoplay; fullscreen; gamepad" sandbox="allow-scripts allow-same-origin allow-popups allow-forms" loading="lazy"></iframe>
+  `;
+  modalOverlay.classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeGame() {
+  gameFrameContainer.innerHTML = '<div class="loading-msg">Loading game...</div>';
+  modalOverlay.classList.remove('active');
+  modalOverlay.classList.remove('fullscreen');
+  document.body.style.overflow = '';
+}
+
+btnClose.addEventListener('click', closeGame);
+
+modalOverlay.addEventListener('click', (e) => {
+  if (e.target === modalOverlay) closeGame();
+});
+
+btnFullscreen.addEventListener('click', () => {
+  modalOverlay.classList.toggle('fullscreen');
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeGame();
+});
+
+searchInput.addEventListener('input', (e) => {
+  currentSearch = e.target.value;
+  renderGames();
+});
+
+categoryNav.addEventListener('click', (e) => {
+  if (e.target.tagName !== 'BUTTON') return;
+  categoryNav.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+  e.target.classList.add('active');
+  currentCategory = e.target.dataset.category;
+  const labels = {
+    all: 'All Games', racing: 'Racing Games', runner: 'Runner Games',
+    action: 'Action Games', puzzle: 'Puzzle Games', sports: 'Sports Games',
+    io: 'IO Games', adventure: 'Adventure Games', strategy: 'Strategy Games'
+  };
+  sectionTitle.textContent = labels[currentCategory] || 'All Games';
+  renderGames();
+});
+
+renderGames();
+</script>
+
+</body>
+</html>
