@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Flappy Neon</title>
+<style>*{margin:0;padding:0}body{overflow:hidden;background:#000;display:flex;align-items:center;justify-content:center;min-height:100vh}canvas{border:2px solid #e94560;border-radius:8px}</style>
+</head><body>
+<canvas id="c" width="400" height="600"></canvas>
+<script>
+const canvas=document.getElementById('c'),ctx=canvas.getContext('2d');
+const W=400,H=600;
+let bird={x:80,y:300,vy:0,r:15};
+let pipes=[],score=0,best=0,dead=true,frame=0,started=false;
+const GAP=150,PIPE_W=50,GRAVITY=0.4,FLAP=-7.5,SPEED=3;
+
+function reset(){
+  bird={x:80,y:300,vy:0,r:15};pipes=[];score=0;dead=false;started=true;frame=0;
+  for(let i=0;i<3;i++)addPipe(W+200+i*200);
+}
+
+function addPipe(x){
+  let topH=60+Math.random()*(H-GAP-120);
+  pipes.push({x,topH,scored:false});
+}
+
+function update(){
+  if(dead)return;
+  frame++;
+  bird.vy+=GRAVITY;bird.y+=bird.vy;
+
+  if(bird.y-bird.r<0||bird.y+bird.r>H){dead=true;best=Math.max(best,score);return}
+
+  for(let p of pipes){
+    p.x-=SPEED;
+    if(bird.x+bird.r>p.x&&bird.x-bird.r<p.x+PIPE_W){
+      if(bird.y-bird.r<p.topH||bird.y+bird.r>p.topH+GAP){dead=true;best=Math.max(best,score);return}
+    }
+    if(!p.scored&&p.x+PIPE_W<bird.x){p.scored=true;score++}
+  }
+
+  pipes=pipes.filter(p=>p.x+PIPE_W>-10);
+  if(pipes.length&&pipes[pipes.length-1].x<W-150)addPipe(W+50);
+}
+
+function draw(){
+  ctx.fillStyle='#0a0a1a';ctx.fillRect(0,0,W,H);
+
+  for(let i=0;i<20;i++){
+    ctx.fillStyle='rgba(83,216,251,0.03)';
+    let y=(i*35+frame*0.5)%H;
+    ctx.fillRect(0,y,W,1);
+  }
+
+  for(let p of pipes){
+    let grad=ctx.createLinearGradient(p.x,0,p.x+PIPE_W,0);
+    grad.addColorStop(0,'#0f3460');grad.addColorStop(0.5,'#16213e');grad.addColorStop(1,'#0f3460');
+    ctx.fillStyle=grad;
+    ctx.fillRect(p.x,0,PIPE_W,p.topH);
+    ctx.fillRect(p.x,p.topH+GAP,PIPE_W,H-p.topH-GAP);
+    ctx.strokeStyle='#53d8fb';ctx.lineWidth=2;
+    ctx.strokeRect(p.x,0,PIPE_W,p.topH);
+    ctx.strokeRect(p.x,p.topH+GAP,PIPE_W,H-p.topH-GAP);
+    ctx.fillStyle='#e94560';
+    ctx.fillRect(p.x-3,p.topH-15,PIPE_W+6,15);
+    ctx.fillRect(p.x-3,p.topH+GAP,PIPE_W+6,15);
+  }
+
+  ctx.save();ctx.translate(bird.x,bird.y);
+  let angle=Math.min(bird.vy*0.05,0.5);ctx.rotate(angle);
+  ctx.shadowColor='#53d8fb';ctx.shadowBlur=20;
+  ctx.fillStyle='#53d8fb';ctx.beginPath();ctx.arc(0,0,bird.r,0,Math.PI*2);ctx.fill();
+  ctx.shadowBlur=0;
+  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(5,-3,5,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#0a0a1a';ctx.beginPath();ctx.arc(7,-3,2.5,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#e94560';
+  ctx.beginPath();ctx.moveTo(bird.r,0);ctx.lineTo(bird.r+8,-3);ctx.lineTo(bird.r+8,3);ctx.fill();
+  ctx.restore();
+
+  for(let i=0;i<3;i++){
+    if(frame%4===0&&!dead){
+      ctx.fillStyle='rgba(83,216,251,0.3)';
+      ctx.beginPath();ctx.arc(bird.x-bird.r-5-i*8,bird.y+Math.random()*6-3,2+Math.random()*2,0,Math.PI*2);ctx.fill();
+    }
+  }
+
+  ctx.fillStyle='#fff';ctx.font='bold 36px monospace';ctx.textAlign='center';
+  ctx.fillText(score,W/2,50);
+  ctx.fillStyle='#888';ctx.font='14px monospace';
+  ctx.fillText('Best: '+best,W/2,75);
+
+  if(dead){
+    ctx.fillStyle='rgba(0,0,0,0.6)';ctx.fillRect(0,0,W,H);
+    if(started){
+      ctx.fillStyle='#e94560';ctx.font='bold 36px monospace';ctx.textAlign='center';
+      ctx.fillText('GAME OVER',W/2,H/2-20);
+      ctx.fillStyle='#fff';ctx.font='20px monospace';
+      ctx.fillText('Score: '+score,W/2,H/2+20);
+    }
+    ctx.fillStyle='#53d8fb';ctx.font=started?'16px monospace':'24px monospace';
+    ctx.fillText(started?'TAP or SPACE to retry':'TAP or SPACE to start',W/2,started?H/2+60:H/2);
+  }
+}
+
+function loop(){update();draw();requestAnimationFrame(loop)}
+loop();
+
+function flap(){if(dead){reset()}else{bird.vy=FLAP}}
+addEventListener('keydown',e=>{if(e.key===' '||e.key==='ArrowUp'){e.preventDefault();flap()}});
+canvas.addEventListener('touchstart',e=>{e.preventDefault();flap()});
+canvas.addEventListener('click',flap);
+</script></body></html>

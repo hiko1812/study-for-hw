@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Neon Jump</title>
+<style>*{margin:0;padding:0}body{overflow:hidden;background:#000}canvas{display:block}</style>
+</head><body>
+<canvas id="c"></canvas>
+<script>
+const canvas=document.getElementById('c'),ctx=canvas.getContext('2d');
+let W,H;function resize(){W=canvas.width=innerWidth;H=canvas.height=innerHeight}
+resize();addEventListener('resize',resize);
+
+let player={x:50,y:0,vx:0,vy:0,w:28,h:34,grounded:false,jumps:0,dir:1};
+let platforms=[],coins=[],particles=[];
+let cameraX=0,cameraY=0,score=0,coinsCollected=0,level=1;
+let keys={};let dead=false,best=0;
+
+function generateLevel(){
+  platforms=[];coins=[];
+  platforms.push({x:0,y:H*0.7,w:200,h:20,color:'#16213e'});
+  let px=150,py=H*0.7;
+  for(let i=0;i<100;i++){
+    let gap=80+Math.random()*100;
+    let dy=-60+Math.random()*120;
+    px+=gap;py=Math.max(100,Math.min(H*0.8,py+dy));
+    let w=60+Math.random()*120;
+    let type=Math.random();
+    let color=type<0.3?'#e94560':type<0.6?'#0f3460':'#16213e';
+    platforms.push({x:px,y:py,w,h:16,color,moving:Math.random()<0.2,moveRange:30+Math.random()*40,moveSpeed:0.02+Math.random()*0.02,phase:Math.random()*Math.PI*2});
+    if(Math.random()<0.6){
+      coins.push({x:px+w/2,y:py-35,collected:false,phase:Math.random()*Math.PI*2});
+    }
+  }
+}
+
+function init(){
+  player={x:50,y:H*0.5,vx:0,vy:0,w:28,h:34,grounded:false,jumps:0,dir:1};
+  cameraX=0;cameraY=0;score=0;coinsCollected=0;dead=false;
+  generateLevel();
+}
+init();
+
+let frame=0;
+function update(){
+  if(dead)return;
+  frame++;
+
+  if(keys['ArrowLeft']||keys['a']){player.vx-=0.8;player.dir=-1}
+  if(keys['ArrowRight']||keys['d']){player.vx+=0.8;player.dir=1}
+  player.vx*=0.88;
+  player.vy+=0.5;
+  player.x+=player.vx;player.y+=player.vy;
+
+  player.grounded=false;
+  for(let p of platforms){
+    let py=p.y;
+    if(p.moving)py+=Math.sin(frame*p.moveSpeed+p.phase)*p.moveRange;
+    if(player.vy>=0&&player.x+player.w>p.x&&player.x<p.x+p.w&&player.y+player.h>py&&player.y+player.h<py+20){
+      player.y=py-player.h;player.vy=0;player.grounded=true;player.jumps=0;
+      if(p.moving)player.y=py-player.h;
+    }
+  }
+
+  for(let c of coins){
+    if(!c.collected){
+      let dx=player.x+player.w/2-c.x,dy=player.y+player.h/2-c.y;
+      if(Math.sqrt(dx*dx+dy*dy)<25){
+        c.collected=true;coinsCollected++;score+=50;
+        for(let i=0;i<8;i++)particles.push({x:c.x,y:c.y,vx:(Math.random()-0.5)*5,vy:(Math.random()-0.5)*5,life:25,color:'#f1c40f',size:3});
+      }
+    }
+  }
+
+  if(player.y>cameraY+H+200){dead=true;best=Math.max(best,score)}
+
+  score=Math.max(score,Math.floor(player.x/10));
+
+  cameraX+=(player.x-W*0.3-cameraX)*0.08;
+  cameraY+=(player.y-H*0.5-cameraY)*0.08;
+
+  for(let p of particles){p.x+=p.vx;p.y+=p.vy;p.life--}
+  particles=particles.filter(p=>p.life>0);
+}
+
+function draw(){
+  ctx.fillStyle='#0a0a1a';ctx.fillRect(0,0,W,H);
+
+  ctx.save();ctx.translate(-cameraX,-cameraY);
+
+  for(let p of platforms){
+    let py=p.y;
+    if(p.moving)py+=Math.sin(frame*p.moveSpeed+p.phase)*p.moveRange;
+    ctx.fillStyle=p.color;
+    ctx.shadowColor=p.color==='#e94560'?'#e94560':'#53d8fb';
+    ctx.shadowBlur=8;
+    ctx.fillRect(p.x,py,p.w,p.h);
+    ctx.shadowBlur=0;
+    ctx.fillStyle=p.color==='#e94560'?'#e9456066':'#53d8fb33';
+    ctx.fillRect(p.x,py-2,p.w,2);
+  }
+
+  for(let c of coins){
+    if(c.collected)continue;
+    let bobY=Math.sin(frame*0.05+c.phase)*5;
+    ctx.fillStyle='#f1c40f';ctx.shadowColor='#f1c40f';ctx.shadowBlur=15;
+    ctx.beginPath();ctx.arc(c.x,c.y+bobY,8,0,Math.PI*2);ctx.fill();
+    ctx.shadowBlur=0;
+    ctx.fillStyle='#f39c12';ctx.font='bold 10px monospace';ctx.textAlign='center';
+    ctx.fillText('$',c.x,c.y+bobY+4);
+  }
+
+  for(let p of particles){
+    ctx.globalAlpha=p.life/25;ctx.fillStyle=p.color;
+    ctx.fillRect(p.x,p.y,p.size,p.size);
+  }
+  ctx.globalAlpha=1;
+
+  if(!dead){
+    let px=player.x,py=player.y;
+    ctx.fillStyle='#53d8fb';ctx.shadowColor='#53d8fb';ctx.shadowBlur=12;
+    ctx.fillRect(px,py,player.w,player.h);
+    ctx.shadowBlur=0;
+    ctx.fillStyle='#fff';
+    let ex=player.dir===1?px+18:px+5;
+    ctx.fillRect(ex,py+8,7,7);
+    ctx.fillStyle='#0a0a1a';
+    ctx.fillRect(player.dir===1?ex+3:ex+1,py+10,3,3);
+    if(!player.grounded){
+      ctx.fillStyle='#53d8fb44';
+      ctx.beginPath();ctx.moveTo(px+5,py+player.h);ctx.lineTo(px+player.w-5,py+player.h);
+      ctx.lineTo(px+player.w/2,py+player.h+12);ctx.fill();
+    }
+  }
+
+  ctx.restore();
+
+  ctx.fillStyle='#fff';ctx.font='bold 20px monospace';ctx.textAlign='left';
+  ctx.fillText('Score: '+score,20,35);
+  ctx.fillStyle='#f1c40f';ctx.fillText('Coins: '+coinsCollected,20,60);
+  ctx.fillStyle='#888';ctx.font='14px monospace';
+  ctx.fillText('Best: '+best,20,80);
+  ctx.fillText('Double jump + WASD/Arrows',20,H-15);
+
+  if(dead){
+    ctx.fillStyle='rgba(0,0,0,0.7)';ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='#e94560';ctx.font='bold 48px monospace';ctx.textAlign='center';
+    ctx.fillText('FELL OFF!',W/2,H/2-30);
+    ctx.fillStyle='#fff';ctx.font='24px monospace';
+    ctx.fillText('Score: '+score+' | Coins: '+coinsCollected,W/2,H/2+20);
+    ctx.fillStyle='#888';ctx.font='16px monospace';
+    ctx.fillText('Press SPACE to restart',W/2,H/2+60);
+  }
+}
+
+function jump(){
+  if(dead){init();return}
+  if(player.jumps<2){player.vy=-10;player.jumps++;player.grounded=false;
+    for(let i=0;i<5;i++)particles.push({x:player.x+player.w/2,y:player.y+player.h,vx:(Math.random()-0.5)*3,vy:Math.random()*3,life:15,color:'#53d8fb',size:3});
+  }
+}
+
+function loop(){update();draw();requestAnimationFrame(loop)}
+loop();
+
+addEventListener('keydown',e=>{
+  keys[e.key]=true;
+  if(e.key===' '||e.key==='ArrowUp'||e.key==='w'){e.preventDefault();jump()}
+});
+addEventListener('keyup',e=>{keys[e.key]=false});
+canvas.addEventListener('touchstart',e=>{e.preventDefault();jump()});
+</script></body></html>

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Slope</title>
+<style>*{margin:0;padding:0}body{overflow:hidden;background:#000}canvas{display:block}</style>
+</head><body>
+<canvas id="c"></canvas>
+<script>
+const canvas=document.getElementById('c');const ctx=canvas.getContext('2d');
+let W,H;function resize(){W=canvas.width=innerWidth;H=canvas.height=innerHeight}
+resize();addEventListener('resize',resize);
+
+let ballX=0,ballY=0,ballZ=0,velX=0,speed=0.15,score=0,dead=false;
+let left=false,right=false;
+let obstacles=[];let roadW=6;
+const colors=['#e94560','#0f3460','#53d8fb','#2ecc71','#f39c12'];
+
+function addObstacle(z){
+  let type=Math.random();
+  if(type<0.4){
+    let side=Math.random()<0.5?-1:1;
+    obstacles.push({x:side*(roadW*0.3+Math.random()*roadW*0.2),z:z,w:roadW*0.35,h:0.8,color:colors[Math.floor(Math.random()*colors.length)]});
+  } else if(type<0.7){
+    obstacles.push({x:(Math.random()-0.5)*roadW*0.6,z:z,w:roadW*0.25,h:0.8,color:colors[Math.floor(Math.random()*colors.length)]});
+  } else {
+    obstacles.push({x:-roadW*0.3,z:z,w:roadW*0.25,h:0.8,color:'#e94560'});
+    obstacles.push({x:roadW*0.3,z:z+3,w:roadW*0.25,h:0.8,color:'#0f3460'});
+  }
+}
+
+for(let i=20;i<300;i+=8+Math.random()*6){addObstacle(i)}
+
+function project(x,y,z){
+  let d=z-ballZ;if(d<0.1)d=0.1;
+  let scale=300/d;
+  return{sx:W/2+(x-ballX)*scale,sy:H*0.45-y*scale,scale:scale,d:d};
+}
+
+function update(){
+  if(dead)return;
+  if(left)velX-=0.008;
+  if(right)velX+=0.008;
+  velX*=0.95;
+  ballX+=velX;
+  ballZ+=speed;
+  speed+=0.00003;
+  score=Math.floor(ballZ*10);
+
+  if(ballX<-roadW/2||ballX>roadW/2)dead=true;
+
+  for(let o of obstacles){
+    let dz=o.z-ballZ;
+    if(dz>-0.5&&dz<0.5){
+      if(ballX>o.x-o.w/2&&ballX<o.x+o.w/2)dead=true;
+    }
+  }
+
+  obstacles=obstacles.filter(o=>o.z-ballZ>-5);
+  let maxZ=obstacles.length?Math.max(...obstacles.map(o=>o.z)):ballZ+50;
+  while(maxZ<ballZ+300){
+    maxZ+=8+Math.random()*6;
+    addObstacle(maxZ);
+  }
+}
+
+function draw(){
+  ctx.fillStyle='#0a0a1a';ctx.fillRect(0,0,W,H);
+
+  for(let i=0;i<60;i++){
+    let z=ballZ+i*2;
+    let left=project(-roadW/2,0,z);
+    let right=project(roadW/2,0,z);
+    let left2=project(-roadW/2,0,z+2);
+    let right2=project(roadW/2,0,z+2);
+    if(left.d<0)continue;
+    ctx.fillStyle=i%2===0?'#1a1a2e':'#16213e';
+    ctx.beginPath();
+    ctx.moveTo(left.sx,left.sy);ctx.lineTo(right.sx,right.sy);
+    ctx.lineTo(right2.sx,right2.sy);ctx.lineTo(left2.sx,left2.sy);
+    ctx.fill();
+
+    ctx.strokeStyle='#e9456033';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(left.sx,left.sy);ctx.lineTo(left2.sx,left2.sy);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(right.sx,right.sy);ctx.lineTo(right2.sx,right2.sy);ctx.stroke();
+  }
+
+  let edgeL=project(-roadW/2-0.3,0,ballZ);
+  let edgeL2=project(-roadW/2-0.3,0,ballZ+120);
+  let edgeR=project(roadW/2+0.3,0,ballZ);
+  let edgeR2=project(roadW/2+0.3,0,ballZ+120);
+  ctx.strokeStyle='#e94560';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(edgeL.sx,edgeL.sy);ctx.lineTo(edgeL2.sx,edgeL2.sy);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(edgeR.sx,edgeR.sy);ctx.lineTo(edgeR2.sx,edgeR2.sy);ctx.stroke();
+
+  for(let o of obstacles){
+    let dz=o.z-ballZ;if(dz<0||dz>100)continue;
+    let p1=project(o.x-o.w/2,0,o.z);
+    let p2=project(o.x+o.w/2,0,o.z);
+    let p3=project(o.x+o.w/2,o.h,o.z);
+    let p4=project(o.x-o.w/2,o.h,o.z);
+    let p5=project(o.x-o.w/2,0,o.z+0.8);
+    let p6=project(o.x+o.w/2,0,o.z+0.8);
+    let p7=project(o.x+o.w/2,o.h,o.z+0.8);
+    let p8=project(o.x-o.w/2,o.h,o.z+0.8);
+
+    ctx.fillStyle=o.color+'cc';
+    ctx.beginPath();ctx.moveTo(p5.sx,p5.sy);ctx.lineTo(p6.sx,p6.sy);ctx.lineTo(p7.sx,p7.sy);ctx.lineTo(p8.sx,p8.sy);ctx.fill();
+    ctx.fillStyle=o.color;
+    ctx.beginPath();ctx.moveTo(p1.sx,p1.sy);ctx.lineTo(p2.sx,p2.sy);ctx.lineTo(p3.sx,p3.sy);ctx.lineTo(p4.sx,p4.sy);ctx.fill();
+    ctx.fillStyle=o.color+'88';
+    ctx.beginPath();ctx.moveTo(p2.sx,p2.sy);ctx.lineTo(p6.sx,p6.sy);ctx.lineTo(p7.sx,p7.sy);ctx.lineTo(p3.sx,p3.sy);ctx.fill();
+  }
+
+  let bp=project(ballX,0.3,ballZ+3);
+  let r=bp.scale*0.3;
+  let grad=ctx.createRadialGradient(bp.sx-r*0.3,bp.sy-r*0.3,r*0.1,bp.sx,bp.sy,r);
+  grad.addColorStop(0,'#53d8fb');grad.addColorStop(1,'#0f3460');
+  ctx.beginPath();ctx.arc(bp.sx,bp.sy,r,0,Math.PI*2);ctx.fillStyle=grad;ctx.fill();
+
+  ctx.fillStyle='#fff';ctx.font='bold 24px monospace';ctx.textAlign='left';
+  ctx.fillText('Score: '+score,20,40);
+  ctx.fillStyle='#53d8fb';ctx.font='14px monospace';
+  ctx.fillText('Speed: '+speed.toFixed(3),20,65);
+
+  if(dead){
+    ctx.fillStyle='rgba(0,0,0,0.7)';ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='#e94560';ctx.font='bold 48px monospace';ctx.textAlign='center';
+    ctx.fillText('GAME OVER',W/2,H/2-30);
+    ctx.fillStyle='#fff';ctx.font='24px monospace';
+    ctx.fillText('Score: '+score,W/2,H/2+20);
+    ctx.fillStyle='#888';ctx.font='16px monospace';
+    ctx.fillText('Press SPACE to restart',W/2,H/2+60);
+  }
+}
+
+function loop(){update();draw();requestAnimationFrame(loop)}
+loop();
+
+addEventListener('keydown',e=>{
+  if(e.key==='ArrowLeft'||e.key==='a')left=true;
+  if(e.key==='ArrowRight'||e.key==='d')right=true;
+  if(e.key===' '&&dead){ballX=0;ballZ=0;velX=0;speed=0.15;score=0;dead=false;obstacles=[];for(let i=20;i<300;i+=8+Math.random()*6)addObstacle(i)}
+});
+addEventListener('keyup',e=>{
+  if(e.key==='ArrowLeft'||e.key==='a')left=false;
+  if(e.key==='ArrowRight'||e.key==='d')right=false;
+});
+
+let touchX=null;
+addEventListener('touchstart',e=>{touchX=e.touches[0].clientX});
+addEventListener('touchmove',e=>{
+  let dx=e.touches[0].clientX-touchX;
+  velX+=dx*0.0002;touchX=e.touches[0].clientX;
+});
+addEventListener('touchend',()=>{touchX=null;if(dead){ballX=0;ballZ=0;velX=0;speed=0.15;score=0;dead=false;obstacles=[];for(let i=20;i<300;i+=8+Math.random()*6)addObstacle(i)}});
+</script></body></html>

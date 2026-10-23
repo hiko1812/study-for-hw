@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Neon Tetris</title>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{background:#0a0a1a;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:monospace;color:#fff}
+.wrap{display:flex;gap:20px;align-items:flex-start}.side{width:140px}
+canvas{border:2px solid #e94560;border-radius:4px}
+.next{margin-bottom:20px}.next canvas{border-color:#53d8fb}
+h2{font-size:14px;color:#888;margin-bottom:5px}
+.stat{font-size:20px;color:#53d8fb;margin-bottom:15px}
+.controls{color:#666;font-size:11px;line-height:1.8}
+</style>
+</head><body>
+<div class="wrap">
+<div class="side">
+<div class="next"><h2>NEXT</h2><canvas id="nc" width="100" height="100"></canvas></div>
+<h2>SCORE</h2><div class="stat" id="sc">0</div>
+<h2>LINES</h2><div class="stat" id="ln">0</div>
+<h2>LEVEL</h2><div class="stat" id="lv">1</div>
+<div class="controls">LEFT/RIGHT: Move<br>UP: Rotate<br>DOWN: Soft drop<br>SPACE: Hard drop<br>R: Restart</div>
+</div>
+<canvas id="c" width="250" height="500"></canvas>
+</div>
+<script>
+const canvas=document.getElementById('c'),ctx=canvas.getContext('2d');
+const nc=document.getElementById('nc'),nctx=nc.getContext('2d');
+const COLS=10,ROWS=20,SZ=25;
+const PIECES=[
+  {shape:[[1,1,1,1]],color:'#53d8fb'},
+  {shape:[[1,1],[1,1]],color:'#f1c40f'},
+  {shape:[[0,1,0],[1,1,1]],color:'#9b59b6'},
+  {shape:[[1,0,0],[1,1,1]],color:'#e67e22'},
+  {shape:[[0,0,1],[1,1,1]],color:'#0f3460'},
+  {shape:[[1,1,0],[0,1,1]],color:'#e94560'},
+  {shape:[[0,1,1],[1,1,0]],color:'#2ecc71'}
+];
+
+let board,current,next,cx,cy,score,lines,level,timer,gameOver;
+
+function init(){
+  board=Array.from({length:ROWS},()=>Array(COLS).fill(null));
+  score=0;lines=0;level=1;gameOver=false;
+  next=randomPiece();spawn();
+  if(timer)clearInterval(timer);
+  timer=setInterval(tick,1000/level);
+  draw();
+}
+
+function randomPiece(){return JSON.parse(JSON.stringify(PIECES[Math.floor(Math.random()*PIECES.length)]))}
+
+function spawn(){
+  current=next;next=randomPiece();
+  cy=0;cx=Math.floor((COLS-current.shape[0].length)/2);
+  if(collides(current.shape,cx,cy)){gameOver=true;clearInterval(timer)}
+  drawNext();
+}
+
+function collides(shape,px,py){
+  for(let r=0;r<shape.length;r++)for(let c=0;c<shape[r].length;c++){
+    if(!shape[r][c])continue;
+    let nx=px+c,ny=py+r;
+    if(nx<0||nx>=COLS||ny>=ROWS)return true;
+    if(ny>=0&&board[ny][nx])return true;
+  }
+  return false;
+}
+
+function rotate(shape){
+  let rows=shape.length,cols=shape[0].length;
+  let rotated=Array.from({length:cols},()=>Array(rows).fill(0));
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++)rotated[c][rows-1-r]=shape[r][c];
+  return rotated;
+}
+
+function lock(){
+  for(let r=0;r<current.shape.length;r++)for(let c=0;c<current.shape[r].length;c++){
+    if(current.shape[r][c]&&cy+r>=0)board[cy+r][cx+c]=current.color;
+  }
+  let cleared=0;
+  for(let r=ROWS-1;r>=0;r--){
+    if(board[r].every(c=>c)){board.splice(r,1);board.unshift(Array(COLS).fill(null));cleared++;r++}
+  }
+  if(cleared){
+    lines+=cleared;
+    score+=[0,100,300,500,800][cleared]*level;
+    level=Math.floor(lines/10)+1;
+    clearInterval(timer);timer=setInterval(tick,Math.max(100,1000-level*80));
+  }
+  spawn();
+}
+
+function tick(){
+  if(gameOver)return;
+  if(!collides(current.shape,cx,cy+1))cy++;
+  else lock();
+  draw();update();
+}
+
+function draw(){
+  ctx.fillStyle='#0f0f1a';ctx.fillRect(0,0,250,500);
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
+    if(board[r][c]){
+      ctx.fillStyle=board[r][c];ctx.fillRect(c*SZ+1,r*SZ+1,SZ-2,SZ-2);
+      ctx.strokeStyle=board[r][c];ctx.globalAlpha=0.3;ctx.strokeRect(c*SZ,r*SZ,SZ,SZ);ctx.globalAlpha=1;
+    } else {
+      ctx.strokeStyle='#1a1a2e';ctx.strokeRect(c*SZ,r*SZ,SZ,SZ);
+    }
+  }
+  if(current&&!gameOver){
+    let ghostY=cy;
+    while(!collides(current.shape,cx,ghostY+1))ghostY++;
+    for(let r=0;r<current.shape.length;r++)for(let c=0;c<current.shape[r].length;c++){
+      if(current.shape[r][c]){
+        ctx.fillStyle=current.color+'33';ctx.fillRect((cx+c)*SZ+1,(ghostY+r)*SZ+1,SZ-2,SZ-2);
+      }
+    }
+    for(let r=0;r<current.shape.length;r++)for(let c=0;c<current.shape[r].length;c++){
+      if(current.shape[r][c]){
+        ctx.fillStyle=current.color;ctx.shadowColor=current.color;ctx.shadowBlur=8;
+        ctx.fillRect((cx+c)*SZ+1,(cy+r)*SZ+1,SZ-2,SZ-2);ctx.shadowBlur=0;
+      }
+    }
+  }
+  if(gameOver){
+    ctx.fillStyle='rgba(0,0,0,0.7)';ctx.fillRect(0,0,250,500);
+    ctx.fillStyle='#e94560';ctx.font='bold 24px monospace';ctx.textAlign='center';
+    ctx.fillText('GAME OVER',125,240);
+    ctx.fillStyle='#888';ctx.font='14px monospace';
+    ctx.fillText('Press R to restart',125,270);
+  }
+}
+
+function drawNext(){
+  nctx.fillStyle='#0f0f1a';nctx.fillRect(0,0,100,100);
+  if(!next)return;
+  let s=next.shape,offX=(100-s[0].length*20)/2,offY=(100-s.length*20)/2;
+  for(let r=0;r<s.length;r++)for(let c=0;c<s[r].length;c++){
+    if(s[r][c]){nctx.fillStyle=next.color;nctx.fillRect(offX+c*20+1,offY+r*20+1,18,18)}
+  }
+}
+
+function update(){
+  document.getElementById('sc').textContent=score;
+  document.getElementById('ln').textContent=lines;
+  document.getElementById('lv').textContent=level;
+}
+
+addEventListener('keydown',e=>{
+  if(e.key==='r'||e.key==='R'){init();return}
+  if(gameOver)return;
+  if(e.key==='ArrowLeft'&&!collides(current.shape,cx-1,cy)){cx--;e.preventDefault()}
+  if(e.key==='ArrowRight'&&!collides(current.shape,cx+1,cy)){cx++;e.preventDefault()}
+  if(e.key==='ArrowDown'){if(!collides(current.shape,cx,cy+1)){cy++;score+=1}e.preventDefault()}
+  if(e.key==='ArrowUp'){let rot=rotate(current.shape);if(!collides(rot,cx,cy))current.shape=rot;e.preventDefault()}
+  if(e.key===' '){while(!collides(current.shape,cx,cy+1)){cy++;score+=2}lock();e.preventDefault()}
+  draw();update();
+});
+
+init();
+</script></body></html>

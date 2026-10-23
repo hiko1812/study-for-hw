@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Neon Runner</title>
+<style>*{margin:0;padding:0}body{overflow:hidden;background:#000}canvas{display:block}</style>
+</head><body>
+<canvas id="c"></canvas>
+<script>
+const canvas=document.getElementById('c'),ctx=canvas.getContext('2d');
+let W,H;function resize(){W=canvas.width=innerWidth;H=canvas.height=innerHeight}
+resize();addEventListener('resize',resize);
+
+const GRAVITY=0.6,JUMP=-12,GROUND_Y=0.75;
+let player={x:100,y:0,vy:0,w:30,h:40,grounded:false,jumps:0};
+let obstacles=[],particles=[];
+let speed=6,score=0,dead=false,frame=0,best=0;
+
+function spawnObstacle(){
+  let type=Math.random();
+  if(type<0.5){
+    let h=30+Math.random()*50;
+    obstacles.push({x:W+50,y:H*GROUND_Y-h,w:20+Math.random()*20,h:h,color:'#e94560'});
+  } else if(type<0.8){
+    obstacles.push({x:W+50,y:H*GROUND_Y-80-Math.random()*40,w:40+Math.random()*30,h:15,color:'#53d8fb',floating:true});
+  } else {
+    let h=40+Math.random()*30;
+    obstacles.push({x:W+50,y:H*GROUND_Y-h,w:15,h:h,color:'#f39c12'});
+    obstacles.push({x:W+90,y:H*GROUND_Y-h-20,w:15,h:h+20,color:'#f39c12'});
+  }
+}
+
+function addParticles(x,y,color,count){
+  for(let i=0;i<count;i++){
+    particles.push({x,y,vx:(Math.random()-0.5)*6,vy:(Math.random()-0.5)*6,life:30+Math.random()*20,color,size:2+Math.random()*3});
+  }
+}
+
+function jump(){
+  if(dead){restart();return}
+  if(player.jumps<2){
+    player.vy=JUMP;player.jumps++;player.grounded=false;
+    addParticles(player.x+player.w/2,player.y+player.h,'#53d8fb',5);
+  }
+}
+
+function restart(){
+  player={x:100,y:0,vy:0,w:30,h:40,grounded:false,jumps:0};
+  obstacles=[];particles=[];speed=6;score=0;dead=false;frame=0;
+}
+
+function update(){
+  if(dead)return;
+  frame++;score=Math.floor(frame/6);
+  speed+=0.002;
+
+  player.vy+=GRAVITY;
+  player.y+=player.vy;
+  let groundY=H*GROUND_Y-player.h;
+  if(player.y>=groundY){player.y=groundY;player.vy=0;player.grounded=true;player.jumps=0}
+
+  if(frame%Math.max(40,90-Math.floor(speed*3))===0)spawnObstacle();
+
+  for(let o of obstacles){
+    o.x-=speed;
+    if(player.x+player.w>o.x&&player.x<o.x+o.w&&player.y+player.h>o.y&&player.y<o.y+o.h){
+      dead=true;best=Math.max(best,score);
+      addParticles(player.x+player.w/2,player.y+player.h/2,'#e94560',30);
+    }
+  }
+  obstacles=obstacles.filter(o=>o.x+o.w>-50);
+
+  if(player.grounded&&frame%3===0)addParticles(player.x,player.y+player.h,'#ffffff22',1);
+
+  for(let p of particles){p.x+=p.vx;p.y+=p.vy;p.life--}
+  particles=particles.filter(p=>p.life>0);
+}
+
+function draw(){
+  ctx.fillStyle='#0a0a1a';ctx.fillRect(0,0,W,H);
+
+  for(let i=0;i<5;i++){
+    let x=((frame*speed*(0.2+i*0.1))%W);
+    ctx.strokeStyle=`rgba(233,69,96,${0.03+i*0.01})`;
+    ctx.beginPath();ctx.moveTo(W-x,0);ctx.lineTo(W-x,H);ctx.stroke();
+  }
+
+  ctx.fillStyle='#1a1a2e';ctx.fillRect(0,H*GROUND_Y,W,H*0.25);
+  ctx.strokeStyle='#e94560';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(0,H*GROUND_Y);ctx.lineTo(W,H*GROUND_Y);ctx.stroke();
+
+  for(let i=0;i<W;i+=40){
+    let x=(i-(frame*speed)%40+40)%W;
+    ctx.fillStyle='#e9456033';ctx.fillRect(x,H*GROUND_Y+10,20,3);
+  }
+
+  for(let p of particles){
+    ctx.globalAlpha=p.life/50;ctx.fillStyle=p.color;
+    ctx.fillRect(p.x,p.y,p.size,p.size);
+  }
+  ctx.globalAlpha=1;
+
+  for(let o of obstacles){
+    ctx.fillStyle=o.color;ctx.fillRect(o.x,o.y,o.w,o.h);
+    ctx.strokeStyle=o.color;ctx.lineWidth=1;
+    ctx.shadowColor=o.color;ctx.shadowBlur=10;
+    ctx.strokeRect(o.x-1,o.y-1,o.w+2,o.h+2);
+    ctx.shadowBlur=0;
+  }
+
+  if(!dead){
+    let px=player.x,py=player.y;
+    ctx.fillStyle='#53d8fb';
+    ctx.shadowColor='#53d8fb';ctx.shadowBlur=15;
+    ctx.fillRect(px,py,player.w,player.h);
+    ctx.shadowBlur=0;
+    ctx.fillStyle='#fff';
+    ctx.fillRect(px+18,py+10,8,8);
+    ctx.fillStyle='#0a0a1a';
+    ctx.fillRect(px+22,py+12,4,4);
+    if(!player.grounded){
+      ctx.fillStyle='#53d8fb88';
+      ctx.beginPath();ctx.moveTo(px,py+player.h);ctx.lineTo(px+player.w,py+player.h);
+      ctx.lineTo(px+player.w/2,py+player.h+15);ctx.fill();
+    }
+  }
+
+  ctx.fillStyle='#fff';ctx.font='bold 20px monospace';ctx.textAlign='left';
+  ctx.fillText('Score: '+score,20,35);
+  ctx.fillStyle='#888';ctx.font='14px monospace';
+  ctx.fillText('Best: '+best,20,55);
+  ctx.fillText('Double jump enabled',20,75);
+
+  if(dead){
+    ctx.fillStyle='rgba(0,0,0,0.7)';ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='#e94560';ctx.font='bold 48px monospace';ctx.textAlign='center';
+    ctx.fillText('GAME OVER',W/2,H/2-30);
+    ctx.fillStyle='#fff';ctx.font='24px monospace';
+    ctx.fillText('Score: '+score,W/2,H/2+20);
+    ctx.fillStyle='#888';ctx.font='16px monospace';
+    ctx.fillText('Press SPACE or TAP to restart',W/2,H/2+60);
+  }
+}
+
+function loop(){update();draw();requestAnimationFrame(loop)}
+loop();
+
+addEventListener('keydown',e=>{if(e.key===' '||e.key==='ArrowUp'||e.key==='w'){e.preventDefault();jump()}});
+addEventListener('touchstart',e=>{e.preventDefault();jump()});
+</script></body></html>
